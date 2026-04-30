@@ -30,6 +30,7 @@ __all__: list[str]  = [
 T = TypeVar("T")
 U = TypeVar("U")
 _T_ShapeCastable = TypeVar("_T_ShapeCastable", bound=ShapeCastable, covariant=True)
+_T_ValueCastable = TypeVar("_T_ValueCastable", bound=ValueCastable, covariant=True)
 Flattenable = T | Iterable[Flattenable[T]]
 SwitchKey = str | int | Enum
 
@@ -49,7 +50,7 @@ class DUID:
         ...
     
 
-class ShapeCastable(Generic[U]):
+class ShapeCastable(Generic[_T_ValueCastable]):
     def __init__(self, *args, **kwargs) -> None:
         ...
 
@@ -59,7 +60,7 @@ class ShapeCastable(Generic[U]):
     def as_shape(self, *args, **kwargs) -> Shape:
         ...
 
-    def __call__(self, target: ValueLike) -> U:
+    def __call__(self, target: ValueLike) -> _T_ValueCastable:
         ...
 
     def const(self, *args, **kwargs) -> Const:
@@ -496,14 +497,14 @@ class Repl(Value):
 
 class _SignalMeta(ABCMeta):
     @overload
-    def __call__(cls, shape: ShapeCastable[T], src_loc_at: int = ..., **kwargs) -> T:
+    def __call__(cls, shape: ShapeCastable[_T_ValueCastable], src_loc_at: int = ..., **kwargs) -> _T_ValueCastable:
         ...
     
     @overload
     def __call__(cls, shape: FlatShapeLike = ..., src_loc_at: int = ..., **kwargs) -> Signal:
         ...
     
-    def __call__(cls, shape: ShapeLike = ..., src_loc_at: int = ..., **kwargs):
+    def __call__(cls, shape: ShapeLike = ..., src_loc_at: int = ..., **kwargs) -> Signal | ValueCastable:
         ...
 
 
@@ -517,6 +518,12 @@ class Signal(Value, DUID, metaclass=_SignalMeta):
     @overload
     @staticmethod
     def like(other: View[_T_ShapeCastable], *, name: Optional[str] = ..., name_suffix: Optional[str] =..., src_loc_at=..., **kwargs) -> View[_T_ShapeCastable]:
+        ...
+    
+    # For extra types that don't match view
+    @overload
+    @staticmethod
+    def like(other: ValueCastable, *, name: Optional[str] = ..., name_suffix: Optional[str] =..., src_loc_at=..., **kwargs) -> ValueCastable:
         ...
 
     @overload
@@ -641,7 +648,7 @@ class ValueCastable:
         ...
 
     @abstractmethod
-    def shape(self) -> ShapeLike:
+    def shape(self) -> ShapeCastable:
         ...
 
 
